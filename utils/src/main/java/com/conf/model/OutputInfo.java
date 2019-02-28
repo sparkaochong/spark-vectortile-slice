@@ -1,74 +1,112 @@
 package com.conf.model;
 
 /**
- * Created by aochong Cotter on 2019/2/20.
- */
-
+ * @program: spark-vectortile-slice
+ * @description: 输出信息实体类
+ * @author: Mr.Ao
+ * @create: 2019-02-22 15:24
+ **/
 public class OutputInfo {
     private int id;
     private String outputType;
     private String path;
     private String level;
-    private String suffixName;
 
-    public OutputInfo(){}
+    public OutputInfo() {
+    }
 
-    public OutputInfo(int id, String outputType, String path, String level, String suffixName) {
+    public OutputInfo(int id, String outputType, String path, String level) {
         this.id = id;
         this.outputType = outputType;
         this.path = path;
         this.level = level;
-        this.suffixName = suffixName;
     }
 
     public int getId() {
-        return id;
+        return this.id;
+    }
+
+    public String getOutputType() {
+        return this.outputType;
+    }
+
+    public String getPath() {
+        return this.path;
+    }
+
+    public String getLevel() {
+        return this.level;
     }
 
     public void setId(int id) {
         this.id = id;
     }
 
-    public String getOutputType() {
-        return outputType;
-    }
-
     public void setOutputType(String outputType) {
         this.outputType = outputType;
-    }
-
-    public String getPath() {
-        return path;
     }
 
     public void setPath(String path) {
         this.path = path;
     }
 
-    public String getLevel() {
-        return level;
-    }
-
     public void setLevel(String level) {
         this.level = level;
     }
 
-    public String getSuffixName() {
-        return suffixName;
+    @Override
+    public boolean equals(final Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof OutputInfo)) {
+            return false;
+        }
+        final OutputInfo other = (OutputInfo) o;
+        if (!other.canEqual((Object) this)) {
+            return false;
+        }
+        if (this.id != other.id) {
+            return false;
+        }
+        final Object this$outputType = this.outputType;
+        final Object other$outputType = other.outputType;
+        if (this$outputType == null ? other$outputType != null : !this$outputType.equals(other$outputType)) {
+            return false;
+        }
+        final Object this$path = this.path;
+        final Object other$path = other.path;
+        if (this$path == null ? other$path != null : !this$path.equals(other$path)) {
+            return false;
+        }
+        final Object this$level = this.level;
+        final Object other$level = other.level;
+        if (this$level == null ? other$level != null : !this$level.equals(other$level)) {
+            return false;
+        }
+        return true;
     }
 
-    public void setSuffixName(String suffixName) {
-        this.suffixName = suffixName;
+    protected boolean canEqual(final Object other) {
+        return other instanceof OutputInfo;
+    }
+
+    @Override
+    public int hashCode() {
+        final int PRIME = 59;
+        int result = 1;
+        result = result * PRIME + this.id;
+        final Object $outputType = this.outputType;
+        result = result * PRIME + ($outputType == null ? 43 : $outputType.hashCode());
+        final Object $path = this.path;
+        result = result * PRIME + ($path == null ? 43 : $path.hashCode());
+        final Object $level = this.level;
+        result = result * PRIME + ($level == null ? 43 : $level.hashCode());
+        return result;
     }
 
     @Override
     public String toString() {
-        return "OutputInfo{" +
-                "id=" + id +
-                ", outputType='" + outputType + '\'' +
-                ", path='" + path + '\'' +
-                ", level='" + level + '\'' +
-                ", suffixName='" + suffixName + '\'' +
-                '}';
+        return "OutputInfo(id=" + this.id + ", outputType=" + this.outputType + ", path=" + this.path + ", level=" + this.level + ")";
     }
 }

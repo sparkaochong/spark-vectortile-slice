@@ -5,6 +5,10 @@ package vector_tile;
 
 import java.io.Serializable;
 
+/**
+ * @description: 矢量瓦片工具
+ * @author: 开源社区
+ **/
 public final class VectorTile implements Serializable {
   private VectorTile() {}
   public static void registerAllExtensions(

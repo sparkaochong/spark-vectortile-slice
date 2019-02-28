@@ -27,6 +27,10 @@ import vector_tile.VectorTile;
 import java.io.Serializable;
 import java.util.*;
 
+/**
+ * @description: 矢量瓦片编码
+ * @author: 开源
+ **/
 public class VectorTileEncoder implements Serializable {
 
     private final Map<String, Layer> layers = new LinkedHashMap<String, Layer>();

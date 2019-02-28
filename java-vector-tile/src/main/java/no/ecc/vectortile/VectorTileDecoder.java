@@ -26,6 +26,10 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
+/**
+ * @description: 矢量瓦片解码
+ * @author: 开源社区
+ **/
 public class VectorTileDecoder implements Serializable {
 
     private boolean autoScale = true;

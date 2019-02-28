@@ -3,8 +3,9 @@ package no.ecc.vectortile;
 import java.util.Set;
 
 /**
- * A filter which can be passed to a VectorTile decoder to optimize performance by only decoding layers of interest.
- */
+ * @description: A filter which can be passed to a VectorTile decoder to optimize performance by only decoding layers of interest.
+ * @author: 开源社区
+ **/
 public abstract class Filter {
 
     public abstract boolean include(String layerName);
