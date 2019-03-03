@@ -2,9 +2,12 @@ package com.ac
 
 import java.sql.{DriverManager, PreparedStatement}
 
+import com.conf.InitConfiguration
+import com.conf.model.ConfBean
 import com.xian80.Impl.VectorTileToolsImpl
-import org.apache.spark.{Partition, SparkContext}
 import org.apache.spark.rdd.{CustomizedJdbcPartition, CustomizedJdbcRDD}
+import org.apache.spark.{Partition, SparkContext}
+import org.locationtech.jts.geom.Geometry
 
 /**
   * @program: spark-vectortile-slice
@@ -13,40 +16,31 @@ import org.apache.spark.rdd.{CustomizedJdbcPartition, CustomizedJdbcRDD}
   * @create: 2019-02-26 15:02
   **/
 object Util {
-  def getRawData(sc: SparkContext): CustomizedJdbcRDD[Array[Object]] = {
+
+  val confBean:ConfBean = InitConfiguration.getInstance().getConfBean
+
+  def getRawData(sc: SparkContext,geoStr: String): CustomizedJdbcRDD[Array[Object]] = {
     val data: CustomizedJdbcRDD[Array[Object]] = new CustomizedJdbcRDD(sc,
       //创建获取JDBC连接函数
       () => {
-        DriverManager.getConnection("jdbc:postgresql://192.168.35.127:5432/test_gis", "postgres", "abc123")
+        DriverManager.getConnection(
+          confBean.getDataSourceInfos.get(1).getDriverUrl(),
+          confBean.getDataSourceInfos.get(1).getUserName(),
+          confBean.getDataSourceInfos.get(1).getPassWord()
+        )
       },
       //设置查询SQL
-      "select id, layer_name, st_astext(geom) geom from hz_building h where st_intersects(st_geomfromtext(?, 2385),h.geom) limit 40000",
+      confBean.getLayerInfos.get(0).getDataDesc,
       //创建分区函数
       () => {
-        //POLYGON ((502167.1699999999 3337913.789999999, 502167.1699999999 3357653.5, 524017.6799999997 3357653.5, 524017.6799999997 3337913.789999999, 502167.1699999999 3337913.789999999))
-        //POLYGON ((307343.56 3004501.42, 307343.56 3451319.45, 767268.15 3451319.45, 767268.15 3004501.42, 307343.56 3004501.42))  building_area_copy
-        //POLYGON((502167.1699999999 3357653.5,524017.6799999997 3357653.5,524017.6799999997 3337913.789999999,502167.1699999999 3337913.789999999,502167.1699999999 3357653.5))  hz_building
-        val str = "POLYGON ((502167.1699999999 3337913.789999999, 502167.1699999999 3357653.5, 524017.6799999997 3357653.5, 524017.6799999997 3337913.789999999, 502167.1699999999 3337913.789999999))";
-        val tiles: java.util.List[String] = new VectorTileToolsImpl().getPolygonStr(str,2)
-
+        val list = com.util.Util.factor(confBean.getExtentInfo.getTaskExtent.getTaskNum)
+        val tiles: java.util.List[String] = new VectorTileToolsImpl().getWindowPolygonStr1(geoStr,list)
+        var parameters = Map[String, Object]()
         val partitions = new Array[Partition](tiles.size())
-        var parameters0 = Map[String, Object]()
-
-        parameters0 += ("1" -> tiles.get(0))
-        val partition0 = new CustomizedJdbcPartition(0, parameters0)
-        partitions(0) = partition0
-
-        parameters0 += ("1" -> tiles.get(1))
-        val partition1 = new CustomizedJdbcPartition(1, parameters0)
-        partitions(1) = partition1
-
-        parameters0 += ("1" -> tiles.get(2))
-        val partition2 = new CustomizedJdbcPartition(2, parameters0)
-        partitions(2) = partition2
-
-        parameters0 += ("1" -> tiles.get(3))
-        val partition3 = new CustomizedJdbcPartition(3, parameters0)
-        partitions(3) = partition3
+        for(x <- 0 to tiles.size()-1){
+          parameters += ("1" -> tiles.get(x))
+          partitions(x) = new CustomizedJdbcPartition(x,parameters)
+        }
 
         partitions
       },
@@ -58,4 +52,20 @@ object Util {
     )
     return data
   }
+
+  def getPolygonStr(confBean: ConfBean):java.util.List[String] = {
+    val initialExtent = confBean.getExtentInfo.getInitialExtent
+    val fullExtent = confBean.getExtentInfo.getFullExtent
+    val initGeometry: Geometry  = com.util.Util.getPolygon(initialExtent.getXmin, initialExtent.getYmin, initialExtent.getXmax, initialExtent.getYmax)
+    val fullGeometry: Geometry = com.util.Util.getPolygon(fullExtent.getXmin, fullExtent.getYmin, fullExtent.getXmax, fullExtent.getYmax)
+    val extent: Geometry = com.util.Util.compare(initGeometry, fullGeometry).asInstanceOf[Geometry]
+    if(initGeometry.compareTo(extent) == 0){
+      val list = com.util.Util.splitFullExtent1(extent,initialExtent.getTaskExtent)
+      return list
+    }else{
+      val list = com.util.Util.splitFullExtent1(extent,fullExtent.getTaskExtent)
+      return list
+    }
+  }
+
 }

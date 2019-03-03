@@ -1,5 +1,6 @@
 import com.conf.Impl.LoadConfImpl;
 import com.conf.model.ConfBean;
+import com.conf.model.ExtentInfo;
 import com.conf.model.TileInfo;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -19,6 +20,7 @@ public class LoadConfTest {
     //加载配置文件信息
     public static ConfBean confBean;
     public static TileInfo tileInfo;
+    public static ExtentInfo extentInfo;
 
     public static void main(String[] args) {
         InputStream in = LoadConfImpl.class.getClassLoader().getResourceAsStream("customMap.xml");
@@ -29,8 +31,10 @@ public class LoadConfTest {
             Element root = doc.getRootElement();//得到根元素
             confBean = LoadConfImpl.getInstance().loadConf(root);//加载配置文件初始值
             tileInfo = confBean.getTileInfo();
-            System.out.println(tileInfo.getTileSize());
-            System.out.println(tileInfo.getOriginX());
+            extentInfo = confBean.getExtentInfo();
+//            System.out.println(tileInfo.getTileSize());
+//            System.out.println(tileInfo.getOriginX());
+            System.out.println(extentInfo.getFullExtent().getXmax());
         } catch (JDOMException e) {
             e.printStackTrace();
         } catch (IOException e) {

@@ -1,8 +1,10 @@
 package com.xian80.Impl;
 
 import com.conf.Impl.LoadConfImpl;
+import com.conf.InitConfiguration;
 import com.conf.model.ConfBean;
 import com.conf.model.TileInfo;
+import com.util.MyException;
 import com.xian80.VectorTileTools;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
@@ -30,24 +32,8 @@ import java.util.Map;
  **/
 public class VectorTileToolsImpl implements VectorTileTools {
 
-    private static TileInfo tileInfo ;
+    private static TileInfo tileInfo = InitConfiguration.getInstance().confBean.getTileInfo();
     private static final Logger LOG = Logger.getLogger(VectorTileToolsImpl.class);
-
-    static{
-        InputStream in = LoadConfImpl.class.getClassLoader().getResourceAsStream("customMap.xml");
-        SAXBuilder sax = new SAXBuilder();
-        Document doc;
-        try {
-            doc = sax.build(in);
-            Element root = doc.getRootElement();
-            ConfBean confBean = LoadConfImpl.getInstance().loadConf(root);
-            tileInfo = confBean.getTileInfo();
-        } catch (JDOMException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public List<String> getColRows(Geometry geom, int level) throws ParseException {
@@ -110,30 +96,92 @@ public class VectorTileToolsImpl implements VectorTileTools {
         }
     }
 
-    public List<String> getPolygonStr(String polygon,int num){
+    /**
+     * 计算切分好的POLYGON，行列必须相等
+     *
+     * @param geo     String类型的POLYGON
+     * @param num 窗口数
+     * @return List<String>
+     */
+    public List<String> getWindowPolygonStr(Geometry geo, int num) {
         List<String> polygonList = new ArrayList<>();
         StringBuilder polygonStr = null;
-        try{
-            Geometry geom = new WKTReader().read(polygon);
-            Envelope env = geom.getEnvelopeInternal();
-            double step = env.getWidth()/ num;
+        Envelope env = geo.getEnvelopeInternal();
+        int taskNum = (int) Math.ceil(Math.sqrt(num));
+        double step = env.getWidth() / taskNum;
+        double minX = env.getMinX();
+        double minY = env.getMinY();
+        for (int x = 1; x <= taskNum; x++) {
+            for (int y = 1; y <= taskNum; y++) {
+                polygonStr = new StringBuilder("POLYGON ((");
+                polygonStr.append(minX).append(" ").append(minY).append(",");
+                polygonStr.append(minX).append(" ").append(minY + step).append(",");
+                polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
+                polygonStr.append(minX + step).append(" ").append(minY).append(",");
+                polygonStr.append(minX).append(" ").append(minY).append("))");
+                polygonList.add(polygonStr.toString());
+                minY = minY + step;
+            }
+            minX = minX + step;
+            minY = env.getMinY();
+        }
+        return polygonList;
+    }
+
+    /**
+     * 计算切分好的POLYGON,行列可以不相等
+     * @param geoStr
+     * @param list
+     * @return
+     * @throws MyException
+     */
+    public List<String> getWindowPolygonStr1(String geoStr, List<Integer> list) throws MyException {
+        List<String> polygonList = new ArrayList<>();
+        StringBuilder polygonStr = null;
+        Geometry geo = null;
+        try {
+            geo = new WKTReader().read(geoStr);
+            Envelope env = geo.getEnvelopeInternal();
             double minX = env.getMinX();
             double minY = env.getMinY();
-            for(int x=1;x<=num;x++){
-                for(int y=1;y<=num;y++){
-                    polygonStr = new StringBuilder("POLYGON ((");
-                    polygonStr.append(minX).append(" ").append(minY).append(",");
-                    polygonStr.append(minX).append(" ").append(minY+step).append(",");
-                    polygonStr.append(minX+step).append(" ").append(minY+step).append(",");
-                    polygonStr.append(minX+step).append(" ").append(minY).append(",");
-                    polygonStr.append(minX).append(" ").append(minY).append("))");
-                    polygonList.add(polygonStr.toString());
-                    minY = minY + step;
-                }
-                minX = minX + step;
-                minY = env.getMinY();
+            if(list.size()!=2){
+                throw new MyException("输入的taskExtent数量不合适，请调整后输入！");
             }
-        }catch(ParseException e){
+            if(list.get(0).compareTo(list.get(1)) == 0){
+                double step = env.getWidth() / list.get(0);
+                for (int x = 1; x <= list.get(0); x++) {
+                    for (int y = 1; y <= list.get(1); y++) {
+                        polygonStr = new StringBuilder("POLYGON ((");
+                        polygonStr.append(minX).append(" ").append(minY).append(",");
+                        polygonStr.append(minX).append(" ").append(minY + step).append(",");
+                        polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
+                        polygonStr.append(minX + step).append(" ").append(minY).append(",");
+                        polygonStr.append(minX).append(" ").append(minY).append("))");
+                        polygonList.add(polygonStr.toString());
+                        minY = minY + step;
+                    }
+                    minX = minX + step;
+                    minY = env.getMinY();
+                }
+            }else{
+                double rowStep = env.getWidth() / list.get(0);
+                double colStep = env.getHeight() / list.get(1);
+                for (int x = 1; x <= list.get(0); x++) {
+                    for (int y = 1; y <= list.get(1); y++) {
+                        polygonStr = new StringBuilder("POLYGON ((");
+                        polygonStr.append(minX).append(" ").append(minY).append(",");
+                        polygonStr.append(minX).append(" ").append(minY + colStep).append(",");
+                        polygonStr.append(minX + rowStep).append(" ").append(minY + colStep).append(",");
+                        polygonStr.append(minX + rowStep).append(" ").append(minY).append(",");
+                        polygonStr.append(minX).append(" ").append(minY).append("))");
+                        polygonList.add(polygonStr.toString());
+                        minY = minY + colStep;
+                    }
+                    minX = minX + rowStep;
+                    minY = env.getMinY();
+                }
+            }
+        } catch (ParseException e) {
             e.printStackTrace();
         }
         return polygonList;
@@ -142,6 +190,7 @@ public class VectorTileToolsImpl implements VectorTileTools {
     public double tileXToX(long tileX, byte zoom) {
         return pixelXToX(tileX * tileInfo.getTileSize(), zoom);
     }
+
     public double tileYToY(long tileY, byte zoom) {
         return pixelYToY(tileY * tileInfo.getTileSize(), zoom);
     }
@@ -158,12 +207,18 @@ public class VectorTileToolsImpl implements VectorTileTools {
 
     public static void main(String[] args) {
         String str = "POLYGON ((502167.1699999999 3337913.789999999, 502167.1699999999 3357653.5, 524017.6799999997 3357653.5, 524017.6799999997 3337913.789999999, 502167.1699999999 3337913.789999999))";
-//        String str = "POLYGON ((0 0,9 0,9 9,0 9,0 0))";
-        VectorTileToolsImpl vtl = new VectorTileToolsImpl();
-        List<String> list = vtl.getPolygonStr(str,2);
+        try {
+            Geometry geo = new WKTReader().read(str);
+//            String str = "POLYGON ((0 0,9 0,9 9,0 9,0 0))";
+            VectorTileToolsImpl vtl = new VectorTileToolsImpl();
+            List<String> list = vtl.getWindowPolygonStr(geo, 2);
 //        List list = vtl.getGeometryStr(str, 4, 16);
-        for (int x = 0; x < list.size(); x++) {
-            System.out.println(list.get(x));
+            for (int x = 0; x < list.size(); x++) {
+                System.out.println(list.get(x));
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
+
     }
 }

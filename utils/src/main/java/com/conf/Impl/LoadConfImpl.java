@@ -3,13 +3,8 @@ package com.conf.Impl;
 import com.conf.LoadConf;
 import com.conf.model.*;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
 import org.jdom2.Element;
-import org.jdom2.JDOMException;
-import org.jdom2.input.SAXBuilder;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +30,7 @@ public class LoadConfImpl implements LoadConf {
         LOG.info("当前配置文件名称：" + node.getName() + ".xml");
         List<Element> confChilds = node.getChildren();
         ConfBean confBean = new ConfBean();
+        ExtentInfo extentInfo = new ExtentInfo();
         for(Element confChild: confChilds){
             String childName = confChild.getName();
             if("tileInfo".equals(childName)){
@@ -49,6 +45,18 @@ public class LoadConfImpl implements LoadConf {
             }else if("outputs".equals(childName)){
                 List<OutputInfo> outputInfos = injectOutputInfo(confChild);
                 confBean.setOutputInfos(outputInfos);
+            }else if("fullExtent".equals(childName)){
+                FullExtent fullExtent = injectFullExtent(confChild);
+                extentInfo.setFullExtent(fullExtent);
+                confBean.setExtentInfo(extentInfo);
+            }else if("initialExtent".equals(childName)){
+                InitialExtent initialExtent = injectInitialExtent(confChild);
+                extentInfo.setInitialExtent(initialExtent);
+                confBean.setExtentInfo(extentInfo);
+            }else if("taskExtent".equals(childName)){
+                TaskExtent taskExtent = injectTaskExtent(confChild);
+                extentInfo.setTaskExtent(taskExtent);
+                confBean.setExtentInfo(extentInfo);
             }
         }
         return confBean;
@@ -137,4 +145,59 @@ public class LoadConfImpl implements LoadConf {
             e.printStackTrace();
         }
         return tileInfo;
-    }}
+    }
+
+    @Override
+    public InitialExtent injectInitialExtent(Element node) {
+        InitialExtent initialExtent = null;
+        try{
+            double xmin = Double.parseDouble(node.getChild("xmin").getValue());
+            double ymin = Double.parseDouble(node.getChild("ymin").getValue());
+            double xmax = Double.parseDouble(node.getChild("xmax").getValue());
+            double ymax = Double.parseDouble(node.getChild("ymax").getValue());
+            int taskExtent = Integer.parseInt(node.getChild("taskExtent").getValue());
+            initialExtent = new InitialExtent(xmin,ymin,xmax,ymax,taskExtent);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return initialExtent;
+    }
+
+    @Override
+    public FullExtent injectFullExtent(Element node) {
+        FullExtent fullExtent = null;
+        try{
+            double xmin = Double.parseDouble(node.getChild("xmin").getValue());
+            double ymin = Double.parseDouble(node.getChild("ymin").getValue());
+            double xmax = Double.parseDouble(node.getChild("xmax").getValue());
+            double ymax = Double.parseDouble(node.getChild("ymax").getValue());
+            int taskExtent = Integer.parseInt(node.getChild("taskExtent").getValue());
+            fullExtent = new FullExtent(xmin,ymin,xmax,ymax,taskExtent);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return fullExtent;
+    }
+
+    @Override
+    public TaskExtent injectTaskExtent(Element node) {
+        TaskExtent taskExtent = null;
+        try{
+            double xmin = Double.parseDouble(node.getChild("xmin").getValue());
+            double ymin = Double.parseDouble(node.getChild("ymin").getValue());
+            double xmax = Double.parseDouble(node.getChild("xmax").getValue());
+            double ymax = Double.parseDouble(node.getChild("ymax").getValue());
+            int taskNum = Integer.parseInt(node.getChild("taskNum").getValue());
+            taskExtent = new TaskExtent(xmin,ymin,xmax,ymax,taskNum);
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return taskExtent;
+    }
+}

@@ -21,4 +21,10 @@ public interface LoadConf {
     public List<OutputInfo> injectOutputInfo(Element node);
 
     public TileInfo injectTileInfo(Element node);
+
+    public InitialExtent injectInitialExtent(Element node);
+
+    public FullExtent injectFullExtent(Element node);
+
+    public TaskExtent injectTaskExtent(Element node);
 }

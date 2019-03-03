@@ -8,19 +8,22 @@
         <ymin>3357653.5</ymin>
         <xmax>524017.6799999997</xmax>
         <ymax>3337913.789999999</ymax>
+        <taskExtent>4</taskExtent>
     </initialExtent>
     <fullExtent>
-        <xmin>502167.1699999999</xmin>
+        <xmin>502168.1699999999</xmin>
         <ymin>3357653.5</ymin>
         <xmax>524017.6799999997</xmax>
-        <ymax>3337913.789999999</ymax>
+        <ymax>3337914.789999999</ymax>
+        <taskExtent>4</taskExtent>
     </fullExtent>
-    <inputRange>
+    <taskExtent>
         <xmin>502167.1699999999</xmin>
         <ymin>3357653.5</ymin>
         <xmax>524017.6799999997</xmax>
         <ymax>3337913.789999999</ymax>
-    </inputRange>
+        <taskNum>9</taskNum>
+    </taskExtent>
     <!--瓦片信息-->
     <tileInfo>
         <originPoint>
@@ -70,8 +73,8 @@
             <wkid>2385</wkid>
             <minScale>66668888</minScale>
             <maxScale>1</maxScale>
-            <dataDesc>select id, layer_name, st_astext(geom) geom from hz_building h where
-                st_intersects(st_geomfromtext(?, 2385),h.geom) limit 40000
+            <dataDesc>select objectid, id, layer_name, st_astext(geom) geom from nav_network.building_area_copy p where
+                st_intersects(st_geomfromtext(?, 2385),p.geom) limit 40000
             </dataDesc>
         </layer>
         <layer>
