@@ -1,24 +1,18 @@
 package com.xian80.Impl;
 
-import com.conf.Impl.LoadConfImpl;
 import com.conf.InitConfiguration;
 import com.conf.model.ConfBean;
 import com.conf.model.TileInfo;
 import com.util.MyException;
+import com.util.Util;
 import com.xian80.VectorTileTools;
 import org.apache.log4j.Logger;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.JDOMException;
-import org.jdom2.input.SAXBuilder;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +27,7 @@ import java.util.Map;
 public class VectorTileToolsImpl implements VectorTileTools {
 
     private static TileInfo tileInfo = InitConfiguration.getInstance().confBean.getTileInfo();
+    private static ConfBean confBean = InitConfiguration.getInstance().confBean;
     private static final Logger LOG = Logger.getLogger(VectorTileToolsImpl.class);
 
     @Override
@@ -91,41 +86,9 @@ public class VectorTileToolsImpl implements VectorTileTools {
         double resolution = tileInfo.getBaseResolution() / (1 << level);
         Coordinate[] cs = geom.getCoordinates();
         for (Coordinate c : cs) {
-            c.x = ((((c.x - tileInfo.getOriginX()) / resolution / tileInfo.getTileSize()) - x) * 16 * tileInfo.getTileSize());
-            c.y = ((((tileInfo.getOriginY() - c.y) / resolution / tileInfo.getTileSize()) - y) * 16 * tileInfo.getTileSize());
+            c.x = (int)((((c.x - tileInfo.getOriginX()) / resolution / tileInfo.getTileSize()) - x) * 16 * tileInfo.getTileSize());
+            c.y = (int)((((tileInfo.getOriginY() - c.y) / resolution / tileInfo.getTileSize()) - y) * 16 * tileInfo.getTileSize());
         }
-    }
-
-    /**
-     * 计算切分好的POLYGON，行列必须相等
-     *
-     * @param geo     String类型的POLYGON
-     * @param num 窗口数
-     * @return List<String>
-     */
-    public List<String> getWindowPolygonStr(Geometry geo, int num) {
-        List<String> polygonList = new ArrayList<>();
-        StringBuilder polygonStr = null;
-        Envelope env = geo.getEnvelopeInternal();
-        int taskNum = (int) Math.ceil(Math.sqrt(num));
-        double step = env.getWidth() / taskNum;
-        double minX = env.getMinX();
-        double minY = env.getMinY();
-        for (int x = 1; x <= taskNum; x++) {
-            for (int y = 1; y <= taskNum; y++) {
-                polygonStr = new StringBuilder("POLYGON ((");
-                polygonStr.append(minX).append(" ").append(minY).append(",");
-                polygonStr.append(minX).append(" ").append(minY + step).append(",");
-                polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
-                polygonStr.append(minX + step).append(" ").append(minY).append(",");
-                polygonStr.append(minX).append(" ").append(minY).append("))");
-                polygonList.add(polygonStr.toString());
-                minY = minY + step;
-            }
-            minX = minX + step;
-            minY = env.getMinY();
-        }
-        return polygonList;
     }
 
     /**
@@ -135,10 +98,11 @@ public class VectorTileToolsImpl implements VectorTileTools {
      * @return
      * @throws MyException
      */
-    public List<String> getWindowPolygonStr1(String geoStr, List<Integer> list) throws MyException {
+    public List<String> getWindowPolygonStr(String geoStr, List<Integer> list) throws MyException {
         List<String> polygonList = new ArrayList<>();
         StringBuilder polygonStr = null;
         Geometry geo = null;
+
         try {
             geo = new WKTReader().read(geoStr);
             Envelope env = geo.getEnvelopeInternal();
@@ -148,20 +112,29 @@ public class VectorTileToolsImpl implements VectorTileTools {
                 throw new MyException("输入的taskExtent数量不合适，请调整后输入！");
             }
             if(list.get(0).compareTo(list.get(1)) == 0){
-                double step = env.getWidth() / list.get(0);
-                for (int x = 1; x <= list.get(0); x++) {
-                    for (int y = 1; y <= list.get(1); y++) {
-                        polygonStr = new StringBuilder("POLYGON ((");
-                        polygonStr.append(minX).append(" ").append(minY).append(",");
-                        polygonStr.append(minX).append(" ").append(minY + step).append(",");
-                        polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
-                        polygonStr.append(minX + step).append(" ").append(minY).append(",");
-                        polygonStr.append(minX).append(" ").append(minY).append("))");
-                        polygonList.add(polygonStr.toString());
-                        minY = minY + step;
+                if(list.get(0) == 0 && list.get(1) == 0){
+                    double xMin = confBean.getExtentInfo().getFullExtent().getXmin();
+                    double yMin = confBean.getExtentInfo().getFullExtent().getYmin();
+                    double xMax = confBean.getExtentInfo().getFullExtent().getXmax();
+                    double yMax = confBean.getExtentInfo().getFullExtent().getYmax();
+                    Geometry geometry = Util.getPolygon(xMin,yMin,xMax,yMax);
+                    polygonList.add(geometry.toString());
+                }else{
+                    double step = env.getWidth() / list.get(0);
+                    for (int x = 1; x <= list.get(0); x++) {
+                        for (int y = 1; y <= list.get(1); y++) {
+                            polygonStr = new StringBuilder("POLYGON ((");
+                            polygonStr.append(minX).append(" ").append(minY).append(",");
+                            polygonStr.append(minX).append(" ").append(minY + step).append(",");
+                            polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
+                            polygonStr.append(minX + step).append(" ").append(minY).append(",");
+                            polygonStr.append(minX).append(" ").append(minY).append("))");
+                            polygonList.add(polygonStr.toString());
+                            minY += step;
+                        }
+                        minX += step;
+                        minY = env.getMinY();
                     }
-                    minX = minX + step;
-                    minY = env.getMinY();
                 }
             }else{
                 double rowStep = env.getWidth() / list.get(0);
@@ -175,9 +148,9 @@ public class VectorTileToolsImpl implements VectorTileTools {
                         polygonStr.append(minX + rowStep).append(" ").append(minY).append(",");
                         polygonStr.append(minX).append(" ").append(minY).append("))");
                         polygonList.add(polygonStr.toString());
-                        minY = minY + colStep;
+                        minY += colStep;
                     }
-                    minX = minX + rowStep;
+                    minX += rowStep;
                     minY = env.getMinY();
                 }
             }
@@ -205,20 +178,4 @@ public class VectorTileToolsImpl implements VectorTileTools {
         return pixelY * resolution;
     }
 
-    public static void main(String[] args) {
-        String str = "POLYGON ((502167.1699999999 3337913.789999999, 502167.1699999999 3357653.5, 524017.6799999997 3357653.5, 524017.6799999997 3337913.789999999, 502167.1699999999 3337913.789999999))";
-        try {
-            Geometry geo = new WKTReader().read(str);
-//            String str = "POLYGON ((0 0,9 0,9 9,0 9,0 0))";
-            VectorTileToolsImpl vtl = new VectorTileToolsImpl();
-            List<String> list = vtl.getWindowPolygonStr(geo, 2);
-//        List list = vtl.getGeometryStr(str, 4, 16);
-            for (int x = 0; x < list.size(); x++) {
-                System.out.println(list.get(x));
-            }
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-    }
 }

@@ -1,4 +1,4 @@
-package com.ac.kryo;
+package com.kryo;
 
 import com.esotericsoftware.kryo.Kryo;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

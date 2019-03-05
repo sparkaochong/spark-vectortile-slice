@@ -2,6 +2,7 @@ package com.conf;
 
 import com.conf.Impl.LoadConfImpl;
 import com.conf.model.ConfBean;
+import com.conf.model.FullExtent;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -19,6 +20,7 @@ import java.io.InputStream;
 public class InitConfiguration {
 
     public ConfBean confBean;
+    public FullExtent fullExtent;
     public static final InitConfiguration INSTANCE= new InitConfiguration();
 
     public static InitConfiguration getInstance(){

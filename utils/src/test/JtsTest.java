@@ -38,22 +38,26 @@ public class JtsTest {
             FullExtent fullExtent = extentInfo.getFullExtent();
             InitialExtent initialExtent = extentInfo.getInitialExtent();
             Geometry initGeometry = Util.getPolygon(initialExtent.getXmin(),initialExtent.getYmin(),initialExtent.getXmax(),initialExtent.getYmax());
+            System.out.println("initGeometry："+initGeometry);
             Geometry fullGeometry = Util.getPolygon(fullExtent.getXmin(),fullExtent.getYmin(),fullExtent.getXmax(),fullExtent.getYmax());
-
+            System.out.println("fullGeometry："+fullGeometry);
             //大于返回1,等于返回0，小于返回-1
-            System.out.println(fullGeometry.compareTo(initGeometry));
             Geometry extent = (Geometry) Util.compare(initGeometry,fullGeometry);
-            System.out.println(extent);
+            System.out.println("extent："+extent);
             /************************************************************************************/
 //            System.out.println("面积为：" + extent.getArea()/4);
             Envelope env = extent.getEnvelopeInternal();
-            System.out.println(env.getArea());
-            System.out.println(env.getHeight() * env.getWidth());
             List<String> geometryList = null;
             try {
-                geometryList = Util.splitFullExtent1(extent,6);
+                geometryList = Util.splitFullExtent(extent,4);
                 for(String geo: geometryList){
-                    System.out.println(geo);
+                    System.out.println("taskExtent："+geo);
+                }
+                String str = "POLYGON ((502167.1699999999 3337913.789999999,502167.1699999999 3348839.044999999,513092.4249999998 3348839.044999999,513092.4249999998 3337913.789999999,502167.1699999999 3337913.789999999))";
+                List<Integer> list = Util.factor(4);
+                List<String> geolist =  new VectorTileToolsImpl().getWindowPolygonStr(str,list);
+                for(String s: geolist){
+                    System.out.println("task："+s);
                 }
             } catch (MyException e) {
                 e.printStackTrace();

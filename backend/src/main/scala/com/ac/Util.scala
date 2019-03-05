@@ -34,7 +34,7 @@ object Util {
       //创建分区函数
       () => {
         val list = com.util.Util.factor(confBean.getExtentInfo.getTaskExtent.getTaskNum)
-        val tiles: java.util.List[String] = new VectorTileToolsImpl().getWindowPolygonStr1(geoStr,list)
+        val tiles: java.util.List[String] = new VectorTileToolsImpl().getWindowPolygonStr(geoStr,list)
         var parameters = Map[String, Object]()
         val partitions = new Array[Partition](tiles.size())
         for(x <- 0 to tiles.size()-1){
@@ -60,11 +60,9 @@ object Util {
     val fullGeometry: Geometry = com.util.Util.getPolygon(fullExtent.getXmin, fullExtent.getYmin, fullExtent.getXmax, fullExtent.getYmax)
     val extent: Geometry = com.util.Util.compare(initGeometry, fullGeometry).asInstanceOf[Geometry]
     if(initGeometry.compareTo(extent) == 0){
-      val list = com.util.Util.splitFullExtent1(extent,initialExtent.getTaskExtent)
-      return list
+      return com.util.Util.splitFullExtent(extent,initialExtent.getTaskExtent)
     }else{
-      val list = com.util.Util.splitFullExtent1(extent,fullExtent.getTaskExtent)
-      return list
+      return com.util.Util.splitFullExtent(extent,fullExtent.getTaskExtent)
     }
   }
 

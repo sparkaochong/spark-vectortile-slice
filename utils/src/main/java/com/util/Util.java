@@ -71,25 +71,6 @@ public class Util {
     }
 
     /**
-     * 切分fullExtent
-     * @param geo
-     * @param taskNum
-     * @return  List<Geometry>
-     */
-    public static List<Geometry> splitFullExtent(Geometry geo,int taskNum) throws ParseException {
-        StringBuilder sb = new StringBuilder("POLYGON ((");
-        List<Geometry> geometries = new ArrayList<Geometry>();
-        double b = Math.sqrt(taskNum);
-        int step = (int) Math.ceil(b);
-        List<String> polyStr = new VectorTileToolsImpl().getWindowPolygonStr(geo,taskNum);
-        for(int x=0;x<polyStr.size();x++){
-            Geometry geoStr = new WKTReader().read(polyStr.get(x));
-            geometries.add(geoStr);
-        }
-        return geometries;
-    }
-
-    /**
      * 得到taskExtent
      * @param geo       要切的范围
      * @param taskNum   task的数量
@@ -97,11 +78,9 @@ public class Util {
      * @throws ParseException
      * @throws MyException
      */
-    public static List<String> splitFullExtent1(Geometry geo,int taskNum) throws ParseException, MyException {
-        StringBuilder sb = new StringBuilder("POLYGON ((");
-        List<Geometry> geometries = new ArrayList<Geometry>();
+    public static List<String> splitFullExtent(Geometry geo,int taskNum) throws ParseException, MyException {
         List<Integer> list = Util.factor(taskNum);
-        List<String> polyStr = new VectorTileToolsImpl().getWindowPolygonStr1(geo.toString(),list);
+        List<String> polyStr = new VectorTileToolsImpl().getWindowPolygonStr(geo.toString(),list);
         return polyStr;
     }
 
@@ -117,17 +96,22 @@ public class Util {
 
     public static List<Integer> factor(int number) {
         List<Integer> list = new ArrayList<Integer>();
-        for(int i=2;i<number;i++) {
-            if(number%i==0) {
-                list.add(i);
-                if(isPrime(number/i)) {
-                    list.add(number/i);
+        if(number !=0){
+            for(int i=2;i<number;i++) {
+                if(number%i==0) {
+                    list.add(i);
+                    if(isPrime(number/i)) {
+                        list.add(number/i);
+                    }
+                    else {
+                        factor(number/i);
+                    }
+                    break;
                 }
-                else {
-                    factor(number/i);
-                }
-                break;
             }
+        }else{
+            list.add(0);
+            list.add(0);
         }
         return list;
     }

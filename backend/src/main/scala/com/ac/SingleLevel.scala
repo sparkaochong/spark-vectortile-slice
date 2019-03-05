@@ -1,5 +1,6 @@
 package com.ac
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util
 
 import com.conf.InitConfiguration
@@ -8,27 +9,19 @@ import no.ecc.vectortile.VectorTileEncoder
 import org.apache.hadoop.hbase.client.{ConnectionFactory, Put}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
-import org.apache.log4j.Logger
+import org.apache.log4j.{LogManager, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.WKTReader
 
 case class PolygonInfo(id: Int, layerName: String, polygon: Geometry)
+
+class SingleLevel{
+
+}
+
 /**
-  *
-  *
-  *
-  *
-  *
-  *
-  *
-  *
-  *
-  *
-  *
-  *
-  *
   * @program: spark-vectortile-slice
   * @description: ${description}
   * @author: Mr.Ao
@@ -36,10 +29,11 @@ case class PolygonInfo(id: Int, layerName: String, polygon: Geometry)
   **/
 object SingleLevel {
   private val confBean = InitConfiguration.getInstance().getConfBean
-  private val LOG: Logger = Logger.getLogger(SingleLevel.getClass)
 
   def main(args: Array[String]): Unit = {
+
     val startTimeMillis = System.currentTimeMillis()
+    val path = confBean.getOutputInfos.get(0).getPath
 
     val conf = new SparkConf()
     conf.set("spark.seriallizer", "org.apache.spark.seriallizer.KryoSeriallizer")
@@ -55,29 +49,45 @@ object SingleLevel {
     import scala.collection.JavaConversions._
 
     val tasks = Util.getPolygonStr(confBean)
+    println(tasks.size())
+    val level = 10
 
-    for(x <- 0 to 0){
-      Util.getRawData(spark.sparkContext,tasks.get(x)).map(line =>{
+    for(x <- 0 to tasks.size()-1){
+      val dataRDD = Util.getRawData(spark.sparkContext,tasks.get(x)).map(line =>{
         val geom = new WKTReader().read(line(2).toString)
         PolygonInfo(Integer.parseInt(line(0).toString),line(1).toString,geom)
-      }).foreach(println(_))
-//        .flatMap(polygonInfo =>{
-//        val tiles = new VectorTileToolsImpl().getColRows(polygonInfo.polygon,0)
-//        tiles.map((_,polygonInfo))
-//      }).groupByKey().flatMap{case (tile,polygonInfoIter) =>
-//        val vte = new VectorTileEncoder(4096, 16, false)
-//        val xy = tile.split("_")
-//        polygonInfoIter.foreach { case polygonInfo =>
-//          val tempGeom = polygonInfo.polygon.copy()
-//          new VectorTileToolsImpl().convert2Pixel(tempGeom, xy(0).toInt, xy(1).toInt, 0)
-//          val attributes = new java.util.HashMap[String, String]()
-//          attributes.put("id", polygonInfo.id.toString)
-//          attributes.put("name", polygonInfo.layerName)
-//          vte.addFeature("hz_building", attributes, tempGeom)
-//        }
-//        val encodedTile = vte.encode()
-//        if (encodedTile.length > 0) Some((tile, encodedTile)) else None
-//      }foreachPartition { iterator =>
+      }).flatMap(polygonInfo =>{
+        val tiles = new VectorTileToolsImpl().getColRows(polygonInfo.polygon,level)
+        tiles.map((_,polygonInfo))
+      }).groupByKey().flatMap{case (tile,polygonInfoIter) =>
+        val vte = new VectorTileEncoder(4096, 16, false)
+        val xy = tile.split("_")
+        polygonInfoIter.foreach { case polygonInfo =>
+          val tempGeom = polygonInfo.polygon.copy()
+          new VectorTileToolsImpl().convert2Pixel(tempGeom, xy(0).toInt, xy(1).toInt, level)
+          val attributes = new java.util.HashMap[String, String]()
+          attributes.put("id", polygonInfo.id.toString)
+          attributes.put("name", polygonInfo.layerName)
+          vte.addFeature("hz_building", attributes, tempGeom)
+        }
+        val encodedTile = vte.encode()
+        if (encodedTile.length > 0) Some((tile, encodedTile)) else None
+      }.foreach { case (tile, encodedTile) =>
+        try {
+          val pbfFile = new File(path + File.separator + level)
+          if (!pbfFile.exists()) pbfFile.mkdirs() //如果文件夹目录不存在，就创建
+          val bos = new BufferedOutputStream(new FileOutputStream(path + level + File.separator + tile + ".pbf"))
+          bos.write(encodedTile)
+          System.out.println(Thread.currentThread().getName + " 写入文件: " + tile + ".pbf")
+          bos.flush()
+          bos.close()
+        } catch {
+          case e: Exception =>
+            Console.err.println(s"error: ${e}")
+        }
+      }
+
+//        .foreachPartition { iterator =>
 //        val conf = HBaseConfiguration.create()
 //        conf.set("hbase.client.keyvalue.maxsize","20971520")
 //        conf.set("hbase.zookeeper.quorum", "master,slave1,slave2")
@@ -97,6 +107,6 @@ object SingleLevel {
     }
 
     spark.stop()
-    LOG.info("程序运行时间：" + (System.currentTimeMillis()- startTimeMillis) + "毫秒!")
+    println("程序运行时间：" + (System.currentTimeMillis()- startTimeMillis) + "毫秒!")
   }
 }
