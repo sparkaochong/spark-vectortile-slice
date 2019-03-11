@@ -5,6 +5,7 @@ import com.conf.model.ConfBean;
 import com.conf.model.TileInfo;
 import com.util.MyException;
 import com.util.Util;
+import com.xian80.VectorTile;
 import com.xian80.VectorTileTools;
 import org.apache.log4j.Logger;
 import org.locationtech.jts.geom.Coordinate;
@@ -66,6 +67,20 @@ public class VectorTileToolsImpl implements VectorTileTools {
         return colRows;
     }
 
+    public double getTileDistance(Geometry geom,int level){
+        double distance = 0.0;
+        try {
+            List<String> colRows = this.getColRows(geom,level);
+            String[] colRow = colRows.get(0).split("_");
+            String pol = this.parseXyz2Bound(Integer.parseInt(colRow[0]),Integer.parseInt(colRow[1]),level);
+            Geometry geometry = new WKTReader().read(pol);
+            distance = geometry.getEnvelopeInternal().getWidth();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return distance;
+    }
+
     @Override
     public String parseXyz2Bound(int x, int y, int z) {
         StringBuilder sb = new StringBuilder("POLYGON ((");
@@ -98,21 +113,22 @@ public class VectorTileToolsImpl implements VectorTileTools {
      * @return
      * @throws MyException
      */
-    public List<String> getWindowPolygonStr(String geoStr, List<Integer> list) throws MyException {
+    public List<String> getWindowPolygonStr(String geoStr, List<Integer> list,int level) throws MyException {
         List<String> polygonList = new ArrayList<>();
         StringBuilder polygonStr = null;
         Geometry geo = null;
-
+        double distance;
         try {
             geo = new WKTReader().read(geoStr);
+            distance = this.getTileDistance(geo,level);
             Envelope env = geo.getEnvelopeInternal();
             double minX = env.getMinX();
             double minY = env.getMinY();
             if(list.size()!=2){
                 throw new MyException("输入的taskExtent数量不合适，请调整后输入！");
             }
-            if(list.get(0).compareTo(list.get(1)) == 0){
-                if(list.get(0) == 0 && list.get(1) == 0){
+            if(VectorTile.isEqual(list)){
+                if(VectorTile.isZero(list)){
                     double xMin = confBean.getExtentInfo().getFullExtent().getXmin();
                     double yMin = confBean.getExtentInfo().getFullExtent().getYmin();
                     double xMax = confBean.getExtentInfo().getFullExtent().getXmax();
@@ -120,38 +136,75 @@ public class VectorTileToolsImpl implements VectorTileTools {
                     Geometry geometry = Util.getPolygon(xMin,yMin,xMax,yMax);
                     polygonList.add(geometry.toString());
                 }else{
-                    double step = env.getWidth() / list.get(0);
+                    if(VectorTile.isOverlap(geo,list,distance)){
+                        double step = env.getWidth() / list.get(0);
+                        for (int x = 1; x <= list.get(0); x++) {
+                            for (int y = 1; y <= list.get(1); y++) {
+                                polygonStr = new StringBuilder("POLYGON ((");
+                                polygonStr.append(minX).append(" ").append(minY).append(",");
+                                polygonStr.append(minX).append(" ").append(minY + step).append(",");
+                                polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
+                                polygonStr.append(minX + step).append(" ").append(minY).append(",");
+                                polygonStr.append(minX).append(" ").append(minY).append("))");
+                                polygonList.add(polygonStr.toString());
+                                minY += step;
+                            }
+                            minX += step;
+                            minY = env.getMinY();
+                        }
+                    }else{
+                        double step = ((int) Math.ceil(env.getWidth() / distance))*distance;
+                        for (int x = 1; x <= list.get(0); x++) {
+                            for (int y = 1; y <= list.get(1); y++) {
+                                polygonStr = new StringBuilder("POLYGON ((");
+                                polygonStr.append(minX).append(" ").append(minY).append(",");
+                                polygonStr.append(minX).append(" ").append(minY + step).append(",");
+                                polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
+                                polygonStr.append(minX + step).append(" ").append(minY).append(",");
+                                polygonStr.append(minX).append(" ").append(minY).append("))");
+                                polygonList.add(polygonStr.toString());
+                                minY += step;
+                            }
+                            minX += step;
+                            minY = env.getMinY();
+                        }
+                    }
+                }
+            }else{
+                if(VectorTile.isOverlap(geo,list,distance)){
+                    double rowStep = env.getWidth() / list.get(0);
+                    double colStep = env.getHeight() / list.get(1);
                     for (int x = 1; x <= list.get(0); x++) {
                         for (int y = 1; y <= list.get(1); y++) {
                             polygonStr = new StringBuilder("POLYGON ((");
                             polygonStr.append(minX).append(" ").append(minY).append(",");
-                            polygonStr.append(minX).append(" ").append(minY + step).append(",");
-                            polygonStr.append(minX + step).append(" ").append(minY + step).append(",");
-                            polygonStr.append(minX + step).append(" ").append(minY).append(",");
+                            polygonStr.append(minX).append(" ").append(minY + colStep).append(",");
+                            polygonStr.append(minX + rowStep).append(" ").append(minY + colStep).append(",");
+                            polygonStr.append(minX + rowStep).append(" ").append(minY).append(",");
                             polygonStr.append(minX).append(" ").append(minY).append("))");
                             polygonList.add(polygonStr.toString());
-                            minY += step;
+                            minY += colStep;
                         }
-                        minX += step;
+                        minX += rowStep;
                         minY = env.getMinY();
                     }
-                }
-            }else{
-                double rowStep = env.getWidth() / list.get(0);
-                double colStep = env.getHeight() / list.get(1);
-                for (int x = 1; x <= list.get(0); x++) {
-                    for (int y = 1; y <= list.get(1); y++) {
-                        polygonStr = new StringBuilder("POLYGON ((");
-                        polygonStr.append(minX).append(" ").append(minY).append(",");
-                        polygonStr.append(minX).append(" ").append(minY + colStep).append(",");
-                        polygonStr.append(minX + rowStep).append(" ").append(minY + colStep).append(",");
-                        polygonStr.append(minX + rowStep).append(" ").append(minY).append(",");
-                        polygonStr.append(minX).append(" ").append(minY).append("))");
-                        polygonList.add(polygonStr.toString());
-                        minY += colStep;
+                }else{
+                    double rowStep = Math.ceil(env.getWidth() / distance)*distance;
+                    double colStep = Math.ceil(env.getHeight() / distance)*distance;
+                    for (int x = 1; x <= list.get(0); x++) {
+                        for (int y = 1; y <= list.get(1); y++) {
+                            polygonStr = new StringBuilder("POLYGON ((");
+                            polygonStr.append(minX).append(" ").append(minY).append(",");
+                            polygonStr.append(minX).append(" ").append(minY + colStep).append(",");
+                            polygonStr.append(minX + rowStep).append(" ").append(minY + colStep).append(",");
+                            polygonStr.append(minX + rowStep).append(" ").append(minY).append(",");
+                            polygonStr.append(minX).append(" ").append(minY).append("))");
+                            polygonList.add(polygonStr.toString());
+                            minY += colStep;
+                        }
+                        minX += rowStep;
+                        minY = env.getMinY();
                     }
-                    minX += rowStep;
-                    minY = env.getMinY();
                 }
             }
         } catch (ParseException e) {

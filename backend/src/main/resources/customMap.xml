@@ -8,14 +8,14 @@
         <ymin>3337913.789999999</ymin>
         <xmax>524017.6799999997</xmax>
         <ymax>3357653.5</ymax>
-        <taskExtent>4</taskExtent>
+        <taskExtent>6</taskExtent>
     </initialExtent>
     <fullExtent>
         <xmin>502167.1699999999</xmin>
         <ymin>3337913.789999999</ymin>
         <xmax>524017.6799999997</xmax>
         <ymax>3357653.5</ymax>
-        <taskExtent>4</taskExtent>
+        <taskExtent>6</taskExtent>
     </fullExtent>
     <taskExtent>3
         <xmin>502167.1699999999</xmin>

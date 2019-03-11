@@ -1,29 +1,37 @@
 package com.xian80;
 
-import com.conf.model.TileInfo;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.Geometry;
+
+import java.util.List;
 
 /**
  * Created by aochong Cotter on 2019/2/20.
  */
-
 public abstract class VectorTile {
 
-    public static TileInfo tile;
-
-    private static double tileXToX(long tileX, byte zoom) {
-        return pixelXToX(tileX * tile.getTileSize(), zoom);
-    }
-    private static double tileYToY(long tileY, byte zoom) {
-        return pixelYToY(tileY * tile.getTileSize(), zoom);
-    }
-
-    private static double pixelXToX(double pixelX, byte zoom) {
-        double resolution = tile.getBaseResolution() / (1 << zoom);
-        return pixelX * resolution;
+    public static boolean isOverlap(Geometry geom, List<Integer> list,double distance){
+        Envelope env = geom.getEnvelopeInternal();
+        double step = env.getWidth()/list.get(0);
+        if(step % distance == 0){
+            return true;
+        }
+        return false;
     }
 
-    private static double pixelYToY(double pixelY, byte zoom) {
-        double resolution = tile.getBaseResolution() / (1 << zoom);
-        return pixelY * resolution;
+    public static boolean isEqual(List<Integer> list){
+        if(list.get(0).compareTo(list.get(1))==0){
+            return true;
+        }
+        return false;
     }
+
+    public static boolean isZero(List<Integer> list){
+        if(list.get(0) == 0 && list.get(1) == 0){
+            return true;
+        }
+        return false;
+    }
+
+
 }

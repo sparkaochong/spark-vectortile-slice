@@ -78,9 +78,9 @@ public class Util {
      * @throws ParseException
      * @throws MyException
      */
-    public static List<String> splitFullExtent(Geometry geo,int taskNum) throws ParseException, MyException {
+    public static List<String> splitFullExtent(Geometry geo,int taskNum,int level) throws ParseException, MyException {
         List<Integer> list = Util.factor(taskNum);
-        List<String> polyStr = new VectorTileToolsImpl().getWindowPolygonStr(geo.toString(),list);
+        List<String> polyStr = new VectorTileToolsImpl().getWindowPolygonStr(geo.toString(),list,level);
         return polyStr;
     }
 

@@ -4,6 +4,8 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util
 
 import com.conf.InitConfiguration
+import com.conf.model.FullExtent
+import com.util.Util
 import com.xian80.Impl.VectorTileToolsImpl
 import no.ecc.vectortile.VectorTileEncoder
 import org.apache.hadoop.hbase.client.{ConnectionFactory, Put}
@@ -15,19 +17,13 @@ import org.apache.spark.sql.SparkSession
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.WKTReader
 
-case class PolygonInfo(id: Int, layerName: String, polygon: Geometry)
-
-class SingleLevel{
-
-}
-
 /**
   * @program: spark-vectortile-slice
   * @description: ${description}
   * @author: Mr.Ao
   * @create: 2019-02-25 11:01
   **/
-object SingleLevel {
+object SingleLevel2Local {
   private val confBean = InitConfiguration.getInstance().getConfBean
 
   def main(args: Array[String]): Unit = {
@@ -48,12 +44,11 @@ object SingleLevel {
 
     import scala.collection.JavaConversions._
 
-    val tasks = Util.getPolygonStr(confBean)
-    println(tasks.size())
     val level = 10
+    val tasks = Util.getPolygonStr(confBean,level)
 
     for(x <- 0 to tasks.size()-1){
-      val dataRDD = Util.getRawData(spark.sparkContext,tasks.get(x)).map(line =>{
+      val dataRDD = Util.getRawData(spark.sparkContext,tasks.get(x),level).map(line =>{
         val geom = new WKTReader().read(line(2).toString)
         PolygonInfo(Integer.parseInt(line(0).toString),line(1).toString,geom)
       }).flatMap(polygonInfo =>{
@@ -75,7 +70,10 @@ object SingleLevel {
       }.foreach { case (tile, encodedTile) =>
         try {
           val pbfFile = new File(path + File.separator + level)
-          if (!pbfFile.exists()) pbfFile.mkdirs() //如果文件夹目录不存在，就创建
+          //如果文件夹目录不存在，就创建
+          if (!pbfFile.exists()) {
+            pbfFile.mkdirs()
+          }
           val bos = new BufferedOutputStream(new FileOutputStream(path + level + File.separator + tile + ".pbf"))
           bos.write(encodedTile)
           System.out.println(Thread.currentThread().getName + " 写入文件: " + tile + ".pbf")
@@ -86,24 +84,6 @@ object SingleLevel {
             Console.err.println(s"error: ${e}")
         }
       }
-
-//        .foreachPartition { iterator =>
-//        val conf = HBaseConfiguration.create()
-//        conf.set("hbase.client.keyvalue.maxsize","20971520")
-//        conf.set("hbase.zookeeper.quorum", "master,slave1,slave2")
-//        val conn = ConnectionFactory.createConnection(conf)
-//        val table = conn.getTable(TableName.valueOf("hz_building"))
-//        val puts = new util.ArrayList[Put]()
-//        iterator.foreach {case (tile, encodedTile) =>
-//          println(encodedTile)
-//          val put = new Put(Bytes.toBytes(s"${tile.reverse}_${0}"))
-//          put.addColumn(Bytes.toBytes("f"), null, encodedTile)
-//          puts.add(put)
-//        }
-//        table.put(puts)
-//        table.close()
-//        conn.close()
-//      }
     }
 
     spark.stop()

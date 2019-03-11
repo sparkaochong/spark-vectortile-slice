@@ -19,7 +19,7 @@ object Util {
 
   val confBean:ConfBean = InitConfiguration.getInstance().getConfBean
 
-  def getRawData(sc: SparkContext,geoStr: String): CustomizedJdbcRDD[Array[Object]] = {
+  def getRawData(sc: SparkContext,geoStr: String,level: Int): CustomizedJdbcRDD[Array[Object]] = {
     val data: CustomizedJdbcRDD[Array[Object]] = new CustomizedJdbcRDD(sc,
       //创建获取JDBC连接函数
       () => {
@@ -34,7 +34,7 @@ object Util {
       //创建分区函数
       () => {
         val list = com.util.Util.factor(confBean.getExtentInfo.getTaskExtent.getTaskNum)
-        val tiles: java.util.List[String] = new VectorTileToolsImpl().getWindowPolygonStr(geoStr,list)
+        val tiles: java.util.List[String] = new VectorTileToolsImpl().getWindowPolygonStr(geoStr,list,level)
         var parameters = Map[String, Object]()
         val partitions = new Array[Partition](tiles.size())
         for(x <- 0 to tiles.size()-1){
@@ -53,17 +53,19 @@ object Util {
     return data
   }
 
-  def getPolygonStr(confBean: ConfBean):java.util.List[String] = {
+  def getPolygonStr(confBean: ConfBean,level: Int):java.util.List[String] = {
     val initialExtent = confBean.getExtentInfo.getInitialExtent
     val fullExtent = confBean.getExtentInfo.getFullExtent
     val initGeometry: Geometry  = com.util.Util.getPolygon(initialExtent.getXmin, initialExtent.getYmin, initialExtent.getXmax, initialExtent.getYmax)
     val fullGeometry: Geometry = com.util.Util.getPolygon(fullExtent.getXmin, fullExtent.getYmin, fullExtent.getXmax, fullExtent.getYmax)
     val extent: Geometry = com.util.Util.compare(initGeometry, fullGeometry).asInstanceOf[Geometry]
     if(initGeometry.compareTo(extent) == 0){
-      return com.util.Util.splitFullExtent(extent,initialExtent.getTaskExtent)
+      return com.util.Util.splitFullExtent(extent,initialExtent.getTaskExtent,level)
     }else{
-      return com.util.Util.splitFullExtent(extent,fullExtent.getTaskExtent)
+      return com.util.Util.splitFullExtent(extent,fullExtent.getTaskExtent,level)
     }
   }
+
+  def
 
 }
